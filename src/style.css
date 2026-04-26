@@ -1,0 +1,202 @@
+@font-face {
+  font-family: 'CustomFont';
+  src: url('/src/Font.ttf') format('truetype');
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(-45deg, #0f1419, #1a2332, #0f1419, #1a3a4a);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+  text-align: center;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  color: #fff;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* 深色系色彩定義 */
+:root {
+  --dark-bg: #0f1419;
+  --darker-bg: #1a2332;
+  --card-bg: #2a3f5f;
+  --blue: #3b82f6;
+  --green: #10b981;
+  --purple: #8b5cf6;
+  --white: #ffffff;
+  --border: #4a6fa5;
+}
+
+button {
+  margin: 8px 5px;
+  padding: 12px 20px;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.btn-tertiary {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+textarea, input[type="text"], input[type="number"], select {
+  padding: 12px;
+  font-size: 14px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: all 0.3s ease;
+  background: #1a2332;
+  color: #fff;
+}
+
+textarea:focus, input[type="text"]:focus, input[type="number"]:focus, select:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+textarea {
+  width: 100%;
+  max-width: 400px;
+  height: 150px;
+  resize: vertical;
+}
+
+select {
+  cursor: pointer;
+}
+
+/* 卡片樣式 */
+.card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 30px;
+  margin: 20px auto;
+  max-width: 600px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+}
+
+.card h2 {
+  color: #fff;
+  margin-top: 0;
+}
+
+/* 配置面板 */
+.config-panel {
+  background: linear-gradient(135deg, rgba(58, 67, 95, 0.5), rgba(42, 63, 95, 0.5));
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 2px dashed var(--border);
+}
+
+.config-panel label {
+  display: block;
+  margin: 10px 0 5px 0;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.config-panel input,
+.config-panel textarea,
+.config-panel select {
+  margin-bottom: 15px;
+}
+
+/* 提示文字 */
+.hint {
+  color: #9ca3af;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* 動畫效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* 響應式 */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 20px;
+    margin: 10px auto;
+  }
+
+  button {
+    padding: 10px 15px;
+    font-size: 14px;
+  }
+
+  textarea, input {
+    max-width: 100%;
+  }
+}
+
