@@ -3,6 +3,7 @@
     <!-- 首頁 -->
     <Transition name="fade">
       <div v-if="showHome" class="home-page">
+        <div ref="vantaRef" class="vanta-background"></div>
         <div class="home-content">
           <h1 class="home-title">{{ i18n.t('appTitle') }}</h1>
           <p class="home-subtitle">{{ i18n.t('appSubtitle') }}</p>
@@ -15,7 +16,7 @@
             <div class="feature">{{ i18n.t('feature5') }}</div>
           </div>
 
-          <button @click="showHome = false" class="btn-start">{{ i18n.t('startBtn') }}</button>
+          <button @click="handleStart" class="btn-start">{{ i18n.t('startBtn') }}</button>
         </div>
       </div>
     </Transition>
@@ -110,7 +111,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onBeforeUnmount, nextTick } from 'vue'
 import RandomPicker from './components/RandomPicker.vue'
 import ScoreBoard from './components/ScoreBoard.vue'
 import Timer from './components/Timer.vue'
@@ -122,6 +123,11 @@ import Settings from './components/Settings.vue'
 import { useI18n } from './composables/useI18n'
 import { useTheme } from './composables/useTheme'
 import { useHistory } from './composables/useHistory'
+import * as THREE from 'three'
+import NET from 'vanta/src/vanta.net'
+
+// 確保 Vanta 能夠取得全局的 THREE 實例，避免 PerspectiveCamera 等找不到方法的錯誤
+window.THREE = THREE
 
 const page = ref('picker')
 const showHome = ref(true)
@@ -129,6 +135,8 @@ const showSettings = ref(false)
 const navbarVisible = ref(true)
 const historyVisible = ref(true)
 const selectedRecord = ref(null)
+const vantaRef = ref(null)
+const vantaEffect = ref(null)
 
 const i18n = useI18n()
 const theme = useTheme()
@@ -217,6 +225,86 @@ const deleteHistory = (item) => {
   }
 }
 
+// 初始化 Vanta 背景效果
+const initVantaEffect = () => {
+  // 銷毀舊效果
+  if (vantaEffect.value) {
+    try {
+      if (vantaEffect.value && vantaEffect.value.destroy) {
+        vantaEffect.value.destroy()
+      }
+    } catch (e) {
+      console.warn('Error destroying vanta effect:', e)
+    }
+    vantaEffect.value = null
+  }
+
+  if (!vantaRef.value) return
+
+  try {
+    // 取得當前主題的accent顏色
+    const accentHex = theme.currentThemeObj.value?.accent || '#3b82f6'
+    const accentColor = parseInt(accentHex.replace('#', ''), 16)
+    
+    vantaEffect.value = NET({
+      el: vantaRef.value,
+      THREE: THREE,
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      minHeight: 200.0,
+      minWidth: 200.0,
+      scale: 1.0,
+      scaleMobile: 1.0,
+      color: accentColor,        // 線條與節點顏色跟隨主題
+      backgroundColor: 0x050a15, // 配合 App 原本的深色背景
+      points: 12.0,              // 節點數量
+      maxDistance: 20.0,         // 連線的觸發距離
+      spacing: 18.0              // 節點間距
+    })
+  } catch (e) {
+    console.error('Vanta initialization error:', e)
+  }
+}
+
+// 處理點擊開始按鈕，在 Vue 卸載 DOM 之前先手動銷毀 Vanta，避免 removeChild 報錯
+const handleStart = () => {
+  if (vantaEffect.value) {
+    try { vantaEffect.value.destroy() } catch (e) {}
+    vantaEffect.value = null
+  }
+  showHome.value = false
+}
+
+// 監聽首頁顯示/隱藏
+watch(showHome, (newVal) => {
+  if (newVal) {
+    // 顯示首頁時初始化效果
+    nextTick(() => {
+      initVantaEffect()
+    })
+  } else {
+    // 離開首頁時銷毀效果，釋放資源
+    if (vantaEffect.value) {
+      try {
+        if (vantaEffect.value && vantaEffect.value.destroy) {
+          vantaEffect.value.destroy()
+        }
+      } catch (e) {
+        console.warn('Error destroying vanta:', e)
+      }
+      vantaEffect.value = null
+    }
+  }
+})
+
+// 監聽主題變化，重新初始化背景效果
+watch(() => theme.currentTheme.value, () => {
+  if (showHome.value) {
+    initVantaEffect()
+  }
+})
+
 onMounted(() => {
   // 初始化主題
   theme.init()
@@ -224,12 +312,31 @@ onMounted(() => {
   window.addEventListener('language-changed', (e) => {
     const newLang = e.detail || localStorage.getItem('appLocale') || 'zh-TW'
     i18n.setLocale(newLang)
-    // 不需要強制重繪，因為i18n.locale已經是響應式的
   })
   window.addEventListener('localeChanged', () => {
-    // 額外的監聽以確保所有組件都能感知語言變更
     appKey.value++
   })
+
+  // 初始首頁時初始化 Vanta 效果
+  if (showHome.value) {
+    nextTick(() => {
+      initVantaEffect()
+    })
+  }
+})
+
+onBeforeUnmount(() => {
+  // 清理 Vanta 效果
+  if (vantaEffect.value) {
+    try {
+      if (vantaEffect.value && vantaEffect.value.destroy) {
+        vantaEffect.value.destroy()
+      }
+    } catch (e) {
+      console.warn('Error destroying vanta on unmount:', e)
+    }
+    vantaEffect.value = null
+  }
 })
 </script>
 
@@ -262,11 +369,26 @@ onMounted(() => {
   justify-content: center;
   min-height: 100vh;
   padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.vanta-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  z-index: 0;
+  display: block !important;
 }
 
 .home-content {
   text-align: center;
   max-width: 700px;
+  position: relative;
+  z-index: 1;
 }
 
 .home-title {

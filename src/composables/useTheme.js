@@ -60,6 +60,7 @@ const themes = {
 
 export function useTheme() {
   const currentTheme = ref(localStorage.getItem('appTheme') || 'dark-blue')
+  const currentThemeObj = ref(themes[currentTheme.value])
   
   const applyTheme = (themeName) => {
     if (!themes[themeName]) return
@@ -78,6 +79,7 @@ export function useTheme() {
     root.style.setProperty('--danger', theme.danger)
     
     currentTheme.value = themeName
+    currentThemeObj.value = theme
     localStorage.setItem('appTheme', themeName)
     
     // 更新body背景
@@ -102,6 +104,7 @@ export function useTheme() {
 
   return {
     currentTheme,
+    currentThemeObj,
     setTheme,
     getThemes,
     init
