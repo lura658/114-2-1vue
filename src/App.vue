@@ -3,6 +3,8 @@
     <!-- 首頁 -->
     <Transition name="fade">
       <div v-if="showHome" class="home-page">
+        <!-- 星空背景 -->
+        <canvas ref="starsRef" class="stars-background"></canvas>
         <div ref="vantaRef" class="vanta-background"></div>
         <div class="home-content">
           <h1 class="home-title">{{ i18n.t('appTitle') }}</h1>
@@ -137,6 +139,9 @@ const historyVisible = ref(true)
 const selectedRecord = ref(null)
 const vantaRef = ref(null)
 const vantaEffect = ref(null)
+const starsRef = ref(null)
+let animationFrameId = null
+let resizeHandler = null
 
 const i18n = useI18n()
 const theme = useTheme()
@@ -258,6 +263,7 @@ const initVantaEffect = () => {
       scaleMobile: 1.0,
       color: accentColor,        // 線條與節點顏色跟隨主題
       backgroundColor: 0x050a15, // 配合 App 原本的深色背景
+      backgroundAlpha: 0,        // 設置透明度為 0 讓底層星空顯示出來
       points: 12.0,              // 節點數量
       maxDistance: 20.0,         // 連線的觸發距離
       spacing: 18.0              // 節點間距
@@ -267,12 +273,56 @@ const initVantaEffect = () => {
   }
 }
 
+// 初始化 HTML Canvas 星空背景
+const initStars = () => {
+  const canvas = starsRef.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  
+  resizeHandler = () => {
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+  }
+  window.addEventListener('resize', resizeHandler)
+  resizeHandler()
+
+  // 產生 150 顆隨機星星
+  const stars = Array.from({ length: 150 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    size: Math.random() * 2 + 1,       // 參考 p5: random(1, 3)
+    speed: Math.random() * 0.8 + 0.2,  // 參考 p5: random(0.2, 1)
+    opacity: Math.random() * 0.5 + 0.5 // 保留一點透明度變化讓星空更有層次
+  }))
+
+  const draw = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    stars.forEach(star => {
+      // 參考 p5 的 update()：y 軸往下掉落
+      star.y += star.speed
+      if (star.y > canvas.height) {
+        star.y = 0
+        star.x = Math.random() * canvas.width
+      }
+      
+      // 參考 p5 的 draw()：畫出純白色的圓形 (對應 p.fill(255) 與 p.circle)
+      ctx.beginPath()
+      ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`
+      ctx.fill()
+    })
+    animationFrameId = requestAnimationFrame(draw)
+  }
+  draw()
+}
+
 // 處理點擊開始按鈕，在 Vue 卸載 DOM 之前先手動銷毀 Vanta，避免 removeChild 報錯
 const handleStart = () => {
   if (vantaEffect.value) {
     try { vantaEffect.value.destroy() } catch (e) {}
     vantaEffect.value = null
   }
+  cleanupStars()
   showHome.value = false
 }
 
@@ -282,6 +332,7 @@ watch(showHome, (newVal) => {
     // 顯示首頁時初始化效果
     nextTick(() => {
       initVantaEffect()
+      initStars()
     })
   } else {
     // 離開首頁時銷毀效果，釋放資源
@@ -295,8 +346,18 @@ watch(showHome, (newVal) => {
       }
       vantaEffect.value = null
     }
+    cleanupStars()
   }
 })
+
+// 清理星空動畫與監聽器
+const cleanupStars = () => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
+  if (resizeHandler) {
+    window.removeEventListener('resize', resizeHandler)
+  }
+  animationFrameId = null
+}
 
 // 監聽主題變化，重新初始化背景效果
 watch(() => theme.currentTheme.value, () => {
@@ -321,6 +382,7 @@ onMounted(() => {
   if (showHome.value) {
     nextTick(() => {
       initVantaEffect()
+      initStars()
     })
   }
 })
@@ -337,6 +399,7 @@ onBeforeUnmount(() => {
     }
     vantaEffect.value = null
   }
+  cleanupStars()
 })
 </script>
 
@@ -352,9 +415,26 @@ onBeforeUnmount(() => {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15), transparent 60%);
+  /* 使用多個交錯的徑向漸層來模擬煙霧/星雲效果 */
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.12) 0%, transparent 60%),
+    radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
+  filter: blur(30px);
+  animation: smoke-drift 15s infinite alternate ease-in-out;
+}
+
+@keyframes smoke-drift {
+  0% {
+    transform: scale(1) translate(0, 0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.05) translate(2%, 3%);
+    opacity: 1;
+  }
 }
 
 .home-page, .main-app, .settings-container, .rename-dialog {
@@ -371,6 +451,16 @@ onBeforeUnmount(() => {
   padding: 20px;
   position: relative;
   overflow: hidden;
+}
+
+.stars-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .vanta-background {
