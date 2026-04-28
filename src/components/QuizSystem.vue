@@ -73,10 +73,10 @@
         <div class="button-group">
           <button 
             v-if="questions.length > 0"
-            @click="startQuiz"
+            @click="saveQuizDesign"
             class="btn-primary btn-large"
           >
-            {{ isEn ? 'Start Quiz' : '開始測驗' }} ✅
+            {{ isEn ? 'Save Quiz & Get Link' : '保存測驗並獲取連結' }} 💾
           </button>
           <button 
             v-else
@@ -89,6 +89,20 @@
             {{ isEn ? 'Clear All' : '清除所有' }}
           </button>
         </div>
+
+        <!-- 分享連結區塊 -->
+        <Transition name="fade">
+          <div v-if="savedQuizId" class="share-link-box">
+            <h4>🔗 {{ isEn ? 'Quiz Ready!' : '測驗準備就緒！' }}</h4>
+            <p>{{ isEn ? 'Share this link or open it for students:' : '將此連結分享給學生或開啟供學生測驗：' }}</p>
+            <div class="link-group">
+              <input type="text" :value="shareUrl" readonly @click="$event.target.select()" class="link-input" />
+              <button @click="openStudentWindow" class="btn-success">
+                🌐 {{ isEn ? 'Open Mini Window' : '開啟測驗小網頁' }}
+              </button>
+            </div>
+          </div>
+        </Transition>
       </div>
     </Transition>
 
@@ -110,7 +124,7 @@
           <button @click="startAnswering" class="btn-primary btn-large">
             {{ isEn ? 'Start Answering' : '開始答題' }}
           </button>
-          <button @click="isActive = false" class="btn-secondary">
+          <button v-if="!isStudentMode" @click="isActive = false" class="btn-secondary">
             {{ isEn ? 'Back' : '返回' }}
           </button>
         </div>
@@ -188,7 +202,7 @@
     <Transition name="fade">
       <div v-if="showResult" class="result-panel">
         <!-- 多人統計 -->
-        <div v-if="allParticipants.length > 0" class="statistics-panel">
+        <div v-if="!isStudentMode && allParticipants.length > 0" class="statistics-panel">
           <h3>{{ isEn ? 'Quiz Statistics' : '測驗統計' }}</h3>
           
           <!-- 分數分佈 -->
@@ -274,15 +288,14 @@
         </div>
 
         <div class="button-group">
-          <button @click="saveQuizResult" class="btn-primary btn-large">
-            {{ isEn ? 'Save Result' : '儲存結果' }} 💾
+          <button v-if="isStudentMode" @click="retakeQuiz" class="btn-success btn-large">
+            {{ isEn ? 'Next Student' : '完成，下一位學生測驗' }} ➕
           </button>
-          <button @click="retakeQuiz" class="btn-success">
-            {{ isEn ? 'Another Participant' : '新參與者重新作答' }} ➕
-          </button>
-          <button @click="isActive = false" class="btn-secondary">
-            {{ isEn ? 'Back to Edit' : '返回編輯' }}
-          </button>
+          <template v-else>
+            <button @click="isActive = false" class="btn-secondary">
+              {{ isEn ? 'Back to Edit' : '返回編輯' }}
+            </button>
+          </template>
         </div>
       </div>
     </Transition>
@@ -290,7 +303,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useHistory } from '../composables/useHistory'
 import { useI18n } from '../composables/useI18n'
 
@@ -304,6 +317,9 @@ const currentQuestionIdx = ref(-1)
 const answers = ref({})
 const score = ref(0)
 const participantName = ref('')
+const savedQuizId = ref(null)
+const isStudentMode = ref(false)
+const studentQuizId = ref(null)
 
 const history = useHistory()
 const i18n = useI18n()
@@ -316,6 +332,41 @@ const newQuestion = ref({
   answer: '',
   explanation: ''
 })
+
+onMounted(() => {
+  const params = new URLSearchParams(window.location.search)
+  const qId = params.get('quiz')
+  if (qId) {
+    isStudentMode.value = true
+    studentQuizId.value = qId
+    
+    // 從本地讀取並載入測驗題目供學生作答
+    const allHists = JSON.parse(localStorage.getItem('appHistories') || '{}')
+    const quizzes = allHists.quiz || []
+    const record = quizzes.find(q => q.id == qId)
+    
+    if (record && record.data) {
+       quizTitle.value = record.data.title || ''
+       questions.value = record.data.questions || []
+       isActive.value = true
+       showResult.value = false
+       currentQuestionIdx.value = -1 // 前往姓名輸入頁
+    } else {
+       alert(isEn.value ? 'Quiz not found' : '找不到該測驗紀錄')
+    }
+  }
+})
+
+const shareUrl = computed(() => {
+  if (!savedQuizId.value) return ''
+  const url = new URL(window.location.href)
+  url.searchParams.set('quiz', savedQuizId.value)
+  return url.toString()
+})
+
+const openStudentWindow = () => {
+  window.open(shareUrl.value, '_blank', 'width=800,height=800')
+}
 
 const currentQuestion = computed(() => {
   return questions.value[currentQuestionIdx.value]
@@ -418,17 +469,26 @@ const submitQuiz = () => {
   })
   score.value = correctCount
   showResult.value = true
+  
+  // 學生模式下提交會自動存檔成績
+  if (isStudentMode.value) {
+    saveQuizResult()
+  }
 }
 
 const saveQuizResult = () => {
-  const quizKey = quizTitle.value || (isEn.value ? `Quiz` : `測驗`)
+  const allHistories = JSON.parse(localStorage.getItem('appHistories') || '{}')
+  const quizzes = allHistories.quiz || []
+  const targetId = isStudentMode.value ? studentQuizId.value : (props.selectedRecord?.id || savedQuizId.value)
   
-  // 首先檢查是否已有該測驗的記錄
-  const existingQuizzes = history.histories.value?.quiz || []
-  let quizRecord = existingQuizzes.find(r => r.data?.title === quizTitle.value)
-  
-  if (!quizRecord) {
-    // 建立新的測驗記錄
+  let recordIdx = quizzes.findIndex(q => q.id == targetId)
+  // 如果找不到 ID，備用方式用標題找
+  if (recordIdx === -1) {
+    recordIdx = quizzes.findIndex(q => q.data?.title === quizTitle.value)
+  }
+
+  if (recordIdx === -1 && !isStudentMode.value) {
+    const quizKey = quizTitle.value || (isEn.value ? `Quiz` : `測驗`)
     const recordData = {
       title: quizTitle.value,
       questions: questions.value,
@@ -439,27 +499,48 @@ const saveQuizResult = () => {
       }],
       createdAt: new Date().toLocaleString('zh-TW')
     }
-    
     history.addHistory('quiz', quizKey, recordData)
-  } else {
-    // 在現有測驗中添加新參與者
-    const participant = {
+    alert(isEn.value ? `Result saved` : `成績已儲存`)
+  } else if (recordIdx !== -1) {
+    if (!quizzes[recordIdx].data.participants) quizzes[recordIdx].data.participants = []
+    
+    quizzes[recordIdx].data.participants.push({
       name: participantName.value,
       score: score.value,
-      answers: JSON.parse(JSON.stringify(answers.value))
+      answers: JSON.parse(JSON.stringify(answers.value)),
+      date: new Date().toLocaleString('zh-TW')
+    })
+    quizzes[recordIdx].data.updatedAt = new Date().toLocaleString('zh-TW')
+    
+    localStorage.setItem('appHistories', JSON.stringify(allHistories))
+    
+    if (!isStudentMode.value) {
+      alert(isEn.value ? `Result saved` : `成績已儲存`)
+      history.updateTrigger.value++
+      window.dispatchEvent(new CustomEvent('history-updated', { detail: 'quiz' }))
     }
-    quizRecord.data.participants.push(participant)
-    quizRecord.data.updatedAt = new Date().toLocaleString('zh-TW')
-    
-    // 手動保存到localStorage
-    localStorage.setItem('appHistories', JSON.stringify(history.histories.value))
-    
-    // 觸發更新
-    history.updateTrigger.value++
-    window.dispatchEvent(new CustomEvent('history-updated', { detail: 'quiz' }))
   }
+}
+
+const saveQuizDesign = () => {
+  const quizKey = quizTitle.value || (isEn.value ? `Quiz` : `測驗`)
+  const recordData = {
+    title: quizKey,
+    questions: questions.value,
+    participants: [],
+    createdAt: new Date().toLocaleString('zh-TW')
+  }
+  history.addHistory('quiz', quizKey, recordData)
   
-  alert(isEn.value ? `Results saved as "${quizKey}"` : `已儲存為 "${quizKey}"`)
+  // 取得生成的 ID 以利顯示分享連結
+  setTimeout(() => {
+    const hists = history.histories.value?.quiz || []
+    if (hists.length > 0) {
+      savedQuizId.value = hists[0].id
+    }
+  }, 100)
+  
+  alert(isEn.value ? 'Save success! You can now share the link.' : '設計保存成功！現在可以取得下方測驗連結供學生測驗了。')
 }
 
 const retakeQuiz = () => {
@@ -534,8 +615,9 @@ watch(() => props.selectedRecord, (newVal) => {
   if (newVal && newVal.data) {
     quizTitle.value = newVal.data.title || newVal.name
     questions.value = newVal.data.questions || []
+    savedQuizId.value = newVal.id
     
-    // 檢查是否是多人測驗記錄
+    // 檢查是否有學生的作答紀錄，若有則直接顯示統計頁面
     if (newVal.data.participants && newVal.data.participants.length > 0) {
       // 顯示多人統計
       isActive.value = true
@@ -549,6 +631,7 @@ watch(() => props.selectedRecord, (newVal) => {
       showResult.value = true
       isActive.value = true
     } else {
+      // 無人作答，停留在編輯模式，並準備顯示分享連結
       showResult.value = false
       isActive.value = false
     }
@@ -1043,5 +1126,27 @@ watch(() => props.selectedRecord, (newVal) => {
 .participant-score {
   color: #9ca3af;
   font-size: 14px;
+}
+
+.share-link-box {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1));
+  border: 2px dashed #10b981;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+  text-align: center;
+}
+.link-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 15px;
+}
+.link-input {
+  flex: 1;
+  max-width: 400px;
+  padding: 10px !important;
+  border-radius: 6px !important;
+  border: 1px solid #3b82f6 !important;
 }
 </style>

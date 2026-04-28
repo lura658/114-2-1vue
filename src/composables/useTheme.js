@@ -55,6 +55,39 @@ const themes = {
     danger: '#dc2626',
     purple: '#fca5a5',
     border: '#b91c1c'
+  },
+  'light-blue': {
+    name: '亮藍色',
+    primary: '#f8fafc',
+    secondary: '#e2e8f0',
+    accent: '#0284c7',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    purple: '#7c3aed',
+    border: '#cbd5e1'
+  },
+  'light-purple': {
+    name: '亮紫色',
+    primary: '#faf5ff',
+    secondary: '#f3e8ff',
+    accent: '#a855f7',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    purple: '#d946ef',
+    border: '#e9d5ff'
+  },
+  'light-green': {
+    name: '亮綠色',
+    primary: '#f0fdf4',
+    secondary: '#dcfce7',
+    accent: '#16a34a',
+    success: '#059669',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    purple: '#84cc16',
+    border: '#bbf7d0'
   }
 }
 

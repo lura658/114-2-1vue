@@ -85,17 +85,17 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close'])
-
 const i18n = useI18n()
-const theme = useTheme()
 const history = useHistory()
+const theme = useTheme()
 
 const isEn = computed(() => i18n.locale.value === 'en')
 
 const showDeleteConfirm = ref(false)
 const dontRemindAgain = ref(localStorage.getItem('dontRemindDeleteAll') === 'true')
 
-const themes = computed(() => theme.getThemes())
+// 獲取主題列表，過濾掉明亮主題，確保符合暗色背景
+const themes = computed(() => theme.getThemes().filter(t => t.name !== '明亮主題' && !t.id?.includes('light')))
 
 const closeSettings = () => {
   emit('close')
@@ -124,7 +124,6 @@ const getThemeName = (name) => {
   if (!isEn.value) return name
   const dict = {
     '預設暗色': 'Dark Default',
-    '明亮主題': 'Light Theme',
     '深海藍': 'Ocean Blue',
     '森林綠': 'Forest Green',
     '皇家紫': 'Royal Purple'
@@ -171,7 +170,7 @@ const handleDeleteConfirm = () => {
   right: 0;
   width: 400px;
   height: 100vh;
-  background: var(--darker-bg);
+  background: #1f2937; /* 固定為暗色背景 */
   border-left: 2px solid var(--blue);
   z-index: 201;
   display: flex;
@@ -202,7 +201,7 @@ const handleDeleteConfirm = () => {
 
 .settings-header h2 {
   margin: 0;
-  color: #fff;
+  color: #e0e0e0; /* 固定為淺色文字 */
   font-size: 1.5em;
 }
 
@@ -210,7 +209,7 @@ const handleDeleteConfirm = () => {
   background: none !important;
   border: none;
   font-size: 24px;
-  color: #fff;
+  color: #e0e0e0; /* 固定為淺色文字 */
   cursor: pointer;
   padding: 0 !important;
   box-shadow: none !important;
@@ -231,7 +230,7 @@ const handleDeleteConfirm = () => {
 }
 
 .setting-item h3 {
-  color: #fff;
+  color: #e0e0e0; /* 固定為淺色文字 */
   margin: 0 0 15px 0;
   font-size: 1.1em;
 }
@@ -244,7 +243,7 @@ const handleDeleteConfirm = () => {
 .lang-btn {
   flex: 1;
   padding: 10px !important;
-  background: var(--card-bg) !important;
+  background: #2a3f5f !important; /* 固定為暗色卡片背景 */
   color: #fff;
   border: 2px solid transparent;
   border-radius: 6px;
@@ -257,7 +256,7 @@ const handleDeleteConfirm = () => {
 }
 
 .lang-btn.active {
-  background: var(--blue) !important;
+  background: #3b82f6 !important; /* 固定為藍色 */
   border-color: var(--blue) !important;
 }
 
@@ -269,7 +268,7 @@ const handleDeleteConfirm = () => {
 
 .theme-btn {
   padding: 15px !important;
-  background: var(--card-bg) !important;
+  background: #1f2937 !important;
   border: 3px solid transparent;
   border-radius: 8px;
   cursor: pointer;
@@ -338,8 +337,8 @@ const handleDeleteConfirm = () => {
 
 .confirm-box {
   position: relative;
-  z-index: 203;
-  background: var(--darker-bg);
+  z-index: 203; /* 確保在最上層 */
+  background: #1f2937; /* 固定為暗色背景 */
   border: 2px solid var(--blue);
   border-radius: 12px;
   padding: 30px;
@@ -359,7 +358,7 @@ const handleDeleteConfirm = () => {
 }
 
 .confirm-message {
-  color: #fff;
+  color: #e0e0e0; /* 固定為淺色文字 */
   font-size: 16px;
   margin: 0 0 20px 0;
   text-align: center;
@@ -371,7 +370,7 @@ const handleDeleteConfirm = () => {
   gap: 10px;
   margin-bottom: 20px;
   cursor: pointer;
-  color: #9ca3af;
+  color: #9ca3af; /* 固定為淺灰色文字 */
   font-size: 13px;
 }
 
@@ -379,7 +378,7 @@ const handleDeleteConfirm = () => {
   cursor: pointer;
   width: 16px;
   height: 16px;
-  accent-color: var(--blue);
+  accent-color: #3b82f6; /* 固定為藍色 */
 }
 
 .confirm-buttons {
@@ -387,24 +386,10 @@ const handleDeleteConfirm = () => {
   gap: 10px;
 }
 
-.btn-confirm {
-  flex: 1;
-  background: linear-gradient(135deg, var(--blue), #2563eb) !important;
-}
-
-.btn-cancel {
-  flex: 1;
-  background: var(--card-bg) !important;
-  border: 2px solid var(--border) !important;
-}
-
 @media (max-width: 480px) {
   .settings-panel {
     width: 100%;
   }
   
-  .theme-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
