@@ -130,21 +130,32 @@ const setTool = (tool) => {
 .whiteboard-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 15px;
   height: 100%;
-  min-height: 500px; /* Ensure it has some height */
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.whiteboard-container h3 {
+  margin: 0;
+  padding: 0;
+  font-size: 1.1em;
+  color: #e0e0e0;
 }
 
 .canvas-wrapper {
-  flex-grow: 1;
-  background-color: #2a3f5f; /* Canvas background */
+  flex: 1;
+  min-height: 0;
+  background-color: #2a3f5f;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #3b82f6;
 }
 
 canvas {
-  display: block; /* Remove extra space below canvas */
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .controls {
@@ -198,6 +209,7 @@ canvas {
 
 .brush-size-slider {
   width: 100px;
+  appearance: none;
   -webkit-appearance: none;
   height: 8px;
   background: #555;

@@ -31,11 +31,30 @@
               <h1>{{ i18n.t('appTitle') }}</h1>
             </div>
             <div class="header-buttons">
-              <button @click="toggleNavbar" class="btn-toggle-nav" :title="navbarVisible ? '收起' : '展開'">
+              <!-- 桌面端按鈕 -->
+              <button @click="toggleNavbar" class="btn-toggle-nav desktop-only" :title="navbarVisible ? '收起' : '展開'">
                 {{ navbarVisible ? '▲' : '▼' }}
               </button>
-              <button @click="showSettings = true" class="btn-settings">⚙️</button>
-              <button @click="handleHome" class="btn-home">{{ isEn ? 'Home' : i18n.t('homePage') }}</button>
+              <button @click="showSettings = true" class="btn-settings desktop-only">⚙️</button>
+              <button @click="handleHome" class="btn-home desktop-only">{{ isEn ? 'Home' : i18n.t('homePage') }}</button>
+              
+              <!-- 行動端漢堡菜單 -->
+              <button @click="showHeaderMenu = !showHeaderMenu" class="btn-hamburger mobile-only">☰</button>
+              
+              <!-- 漢堡菜單下拉內容 -->
+              <Transition name="slide-down">
+                <div v-if="showHeaderMenu" class="header-menu-dropdown">
+                  <button @click="toggleNavbar; showHeaderMenu = false" class="menu-item">
+                    {{ navbarVisible ? '收起導航' : '展開導航' }}
+                  </button>
+                  <button @click="showSettings = true; showHeaderMenu = false" class="menu-item">
+                    ⚙️ {{ isEn ? 'Settings' : '設定' }}
+                  </button>
+                  <button @click="handleHome; showHeaderMenu = false" class="menu-item">
+                    {{ isEn ? 'Home' : '首頁' }}
+                  </button>
+                </div>
+              </Transition>
             </div>
           </header>
 
@@ -134,6 +153,7 @@ const showSettings = ref(false)
 const navbarVisible = ref(true)
 const historyVisible = ref(true)
 const selectedRecord = ref(null)
+const showHeaderMenu = ref(false)
 
 const i18n = useI18n()
 const history = useHistory() // 這裡的 useHistory 現在會被正確導入
@@ -383,6 +403,70 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   align-items: center;
+  position: relative;
+}
+
+.desktop-only {
+  display: flex;
+}
+
+.mobile-only {
+  display: none;
+}
+
+.btn-hamburger {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+  padding: 6px 10px !important;
+  font-size: 18px !important;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 6px;
+  border: none;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-hamburger:hover {
+  transform: scale(1.05);
+}
+
+/* 漢堡菜單下拉 */
+.header-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: linear-gradient(135deg, #0f1419, #1a2332);
+  border: 2px solid var(--blue);
+  border-radius: 8px;
+  min-width: 180px;
+  z-index: 101;
+  margin-top: 5px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--border);
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-item:hover {
+  background: rgba(59, 130, 246, 0.2);
+  padding-left: 20px;
 }
 
 .btn-toggle-nav {
@@ -419,10 +503,31 @@ onMounted(() => {
   background: #1a2332;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  overflow-y: hidden;
   position: sticky;
   top: 60px;
   z-index: 99;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: var(--blue) transparent;
+  scroll-behavior: smooth;
+}
+
+.navbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.navbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.navbar::-webkit-scrollbar-thumb {
+  background: var(--blue);
+  border-radius: 3px;
+}
+
+.navbar::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
 }
 
 .nav-btn {
@@ -470,13 +575,14 @@ onMounted(() => {
   gap: 20px;
   padding: 20px;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* 歷史記錄區域 */
 .history-panel {
-  width: 280px;
+  width: clamp(200px, 25vw, 320px);
   background: var(--card-bg);
-  border-radius: 12px; /* 稍微圓潤一點 */
+  border-radius: 12px;
   border: 1px solid var(--border);
   padding: 15px;
   display: flex;
@@ -484,6 +590,7 @@ onMounted(() => {
   overflow-x: hidden;
   flex-shrink: 0;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: width 0.3s ease;
 }
 
 .history-header {
@@ -597,7 +704,9 @@ onMounted(() => {
 .content-area {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   min-width: 0;
+  min-height: 0;
 }
 
 .fade-enter-active, .fade-leave-active {
@@ -606,6 +715,21 @@ onMounted(() => {
 
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+/* 下拉菜單過渡動畫 */
+.slide-down-enter-active, .slide-down-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-down-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 /* 重新命名對話框 */
@@ -669,7 +793,7 @@ onMounted(() => {
 /* 響應式設計 */
 @media (max-width: 1024px) {
   .history-panel {
-    width: 220px;
+    width: clamp(180px, 20vw, 280px);
   }
   
   .navbar {
@@ -678,29 +802,44 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: flex !important;
+  }
+
   .app-header {
-    flex-wrap: wrap;
     padding: 10px;
     gap: 8px;
   }
 
   .header-title h1 {
     font-size: 1.3em;
-    flex: 0 0 100%;
   }
 
   .header-buttons {
-    flex: 1;
+    position: relative;
+  }
+
+  .header-menu-dropdown {
+    right: 0;
   }
   
   .navbar {
     gap: 5px;
     padding: 8px 10px;
+    top: 60px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
   }
   
   .nav-btn {
     padding: 6px 10px;
     font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .main-container {
@@ -711,12 +850,14 @@ onMounted(() => {
 
   .history-panel {
     width: 100%;
-    max-height: 150px;
+    max-height: 180px;
     margin-bottom: 10px;
+    flex-shrink: 0;
   }
 
   .content-area {
     flex: 1;
+    min-height: 0;
   }
 }
 
@@ -739,19 +880,25 @@ onMounted(() => {
     gap: 5px;
   }
 
-  .header-buttons button {
-    padding: 4px 8px !important;
-    font-size: 14px !important;
+  .header-title h1 {
+    font-size: 1.1em;
+  }
+
+  .header-buttons {
+    flex: 1;
   }
 
   .navbar {
     gap: 4px;
     padding: 6px 8px;
+    top: 60px;
   }
 
   .nav-btn {
     padding: 5px 8px;
     font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .main-container {
@@ -760,6 +907,15 @@ onMounted(() => {
 
   .history-panel {
     max-height: 120px;
+  }
+
+  .header-menu-dropdown {
+    min-width: 160px;
+  }
+
+  .menu-item {
+    padding: 10px 12px;
+    font-size: 13px;
   }
 }
 
